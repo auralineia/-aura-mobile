@@ -3,51 +3,125 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="theme-color" content="#101820">
+<meta name="theme-color" content="#08131c">
 <title>FRONTIER | Open World</title>
 <style>
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#101820;color:#eaf4fa;font:16px system-ui}
-#loading{position:fixed;inset:0;display:grid;place-content:center;text-align:center;padding:24px;box-sizing:border-box}
-#loading small{color:#a9bdca;margin-top:10px}
-#loading .err{color:#ffb7ad}
+:root{--ice:#c8f0ff;--glass:rgba(8,18,28,.82);--line:rgba(202,231,245,.24);--muted:#9eb5c4}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#08131c;color:#f3f8fb;font-family:Inter,system-ui,-apple-system,sans-serif;touch-action:none}canvas{display:block}
+#game{position:fixed;inset:0}#hud{position:fixed;inset:0;pointer-events:none}
+.top{position:absolute;top:max(12px,env(safe-area-inset-top));left:18px;right:18px;display:flex;align-items:center;gap:10px}
+.pill,.panel,.control{background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);box-shadow:0 8px 28px #0005}
+.pill{border-radius:16px;padding:10px 15px;font-size:12px;letter-spacing:2px;font-weight:800}.pill b{color:var(--ice)}#money{margin-left:auto;color:#8ff0b5;letter-spacing:0;font-size:15px}
+#location{position:absolute;left:20px;top:82px;font-size:11px;letter-spacing:3px;color:#d8eaf4;text-shadow:0 2px 8px #000}
+#mission{position:absolute;left:20px;top:108px;max-width:min(380px,48vw);padding:13px 16px;border-radius:15px;font-size:13px;line-height:1.45}
+#stats{position:absolute;right:20px;top:82px;width:205px;padding:14px;border-radius:16px;font-size:12px;line-height:1.9}
+.stat{height:5px;background:#233745;border-radius:9px;overflow:hidden;margin:3px 0 7px}.stat i{display:block;height:100%;background:linear-gradient(90deg,#8ddcf3,#d6f4ff);width:100%}
+#actions{position:absolute;right:20px;bottom:20px;display:grid;grid-template-columns:repeat(3,minmax(82px,116px));gap:8px;pointer-events:auto}
+.control{border-radius:15px;min-height:58px;padding:10px 8px;color:#f3f8fb;font-weight:800;font-size:11px;letter-spacing:1px;text-transform:uppercase}
+.control.primary{background:#c8edfa;color:#10202a;border-color:#e6f9ff}
+#stick{position:absolute;left:22px;bottom:22px;width:142px;height:142px;border-radius:50%;background:#08131c66;border:1px solid #d5eafa55;pointer-events:auto;touch-action:none}
+#knob{position:absolute;width:55px;height:55px;border-radius:50%;background:#c8edfa;left:43px;top:43px;box-shadow:0 3px 20px #0005}
+#hint{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);padding:9px 13px;border-radius:12px;font-size:11px;color:#d5e8f2;white-space:nowrap}
+#overlay{position:fixed;inset:0;display:none;place-items:center;background:#02080dcc;backdrop-filter:blur(8px);z-index:10;padding:20px}
+#modal{width:min(520px,92vw);max-height:80vh;overflow:auto;border:1px solid var(--line);border-radius:22px;background:#0d1b26;padding:22px;box-shadow:0 20px 70px #0009}
+#modal h2{margin:0 0 8px;font-size:22px}#modal p{color:#b7c9d4;font-size:14px;line-height:1.5}
+.modalgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-top:16px}.modalgrid button{min-height:52px}
+#rotate{display:none;position:fixed;inset:0;z-index:20;background:#08131c;color:white;align-items:center;justify-content:center;text-align:center;padding:30px;font-size:18px;font-weight:700}
+#rotate span{display:block;font-size:46px;margin-bottom:16px}
+@media(orientation:portrait){#rotate{display:flex}#hud{display:none}}
+@media(max-height:480px){.top{top:7px}.pill{padding:7px 11px}#location{top:58px}#mission{top:82px;padding:9px 12px}#stats{top:58px;padding:9px;width:175px}#actions{bottom:10px;right:12px;grid-template-columns:repeat(3,95px);gap:6px}.control{min-height:48px}#stick{width:112px;height:112px;left:12px;bottom:10px}#knob{width:44px;height:44px;left:33px;top:33px}#hint{bottom:12px}}
 </style>
 </head>
 <body>
-<div id="loading"><strong style="font-size:28px;letter-spacing:5px">FRONTIER</strong><small>Carregando o mundo...</small></div>
-<script>
-(async()=>{
-const base='https://raw.githubusercontent.com/auralineia/-aura-mobile/main/';
-try{
- const paths=[1,2,3,4,5,6,7].map(n=>base+'frontier_payload_v03_'+n+'.txt?rev=3');
- const responses=await Promise.all(paths.map(path=>fetch(path,{cache:'no-store'})));
- const bad=responses.findIndex(response=>!response.ok);
- if(bad!==-1) throw new Error('Falha ao carregar parte '+(bad+1)+' ('+responses[bad].status+').');
- const chunks=await Promise.all(responses.map(response=>response.text()));
- const encoded=chunks.join('').replace(/\\s/g,'');
- const binary=atob(encoded);
- const bytes=new Uint8Array(binary.length);
- for(let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
- if(!('DecompressionStream' in window)) throw new Error('Este Safari não oferece suporte ao formato do jogo. Atualize o iOS.');
- const stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
- let html=await new Response(stream).text();
- const landscape=`
-<style>
-html,body{margin:0;width:100%;height:100%;overflow:hidden}
-#frontier-rotate-note{display:none}
-@media(orientation:portrait){
- #frontier-rotate-note{display:flex;position:fixed;inset:0;z-index:2147483647;background:#101820;color:#eef7ff;align-items:center;justify-content:center;text-align:center;padding:28px;box-sizing:border-box;font:600 18px system-ui}
- #frontier-rotate-note span{display:block;font-size:42px;margin-bottom:18px}
+<div id="game"></div><div id="rotate"><div><span>↻</span>Gire o celular para jogar na horizontal.</div></div>
+<div id="hud">
+ <div class="top"><div class="pill"><b>FRONTIER</b> &nbsp; OPEN WORLD</div><div class="pill" id="role">CIVILIANO · NÍVEL 1</div><div class="pill" id="money">$ 2,500</div></div>
+ <div id="location">LOOTY BAY · DOWNTOWN</div>
+ <div id="mission" class="panel">Explore a cidade. Entre em estabelecimentos, encontre oportunidades e construa sua reputação.</div>
+ <div id="stats" class="panel"><b>STATUS DO PERSONAGEM</b><br>VIDA <span id="hp">100</span><div class="stat"><i id="hpbar"></i></div>ENERGIA <span id="energy">100</span><div class="stat"><i id="energybar"></i></div><span id="wanted" style="color:#9fb6c5">SEM PROCURADO</span><br><span id="bagcount">MOCHILA 0/20</span></div>
+ <div id="stick"><div id="knob"></div></div>
+ <div id="hint" class="panel">Aproxime-se de um local e toque em INTERAGIR</div>
+ <div id="actions"><button class="control" id="map">MAPA</button><button class="control" id="bag">MOCHILA</button><button class="control" id="camera">1ª PESSOA</button><button class="control" id="mask">COLOCAR MÁSCARA</button><button class="control" id="run">CORRER</button><button class="control primary" id="act">INTERAGIR</button></div>
+</div>
+<div id="overlay"><div id="modal"><h2 id="mtitle">FRONTIER</h2><p id="mbody"></p><div class="modalgrid" id="mgrid"></div><button class="control" id="close" style="width:100%;margin-top:12px">FECHAR</button></div></div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+const root=document.getElementById('game');
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x9bb9c5);scene.fog=new THREE.Fog(0x9bb9c5,75,240);
+const camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.1,500);
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;root.appendChild(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xd8efff,0x59604f,2.0));
+const sun=new THREE.DirectionalLight(0xffe4c0,3.0);sun.position.set(-45,80,35);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-100;sun.shadow.camera.right=100;sun.shadow.camera.top=100;sun.shadow.camera.bottom=-100;scene.add(sun);
+const mat=(c,r=.85,m=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m});
+const asphalt=mat(0x303b42),concrete=mat(0x89918a),sidewalk=mat(0xb8b7aa),glass= new THREE.MeshPhysicalMaterial({color:0x183b50,metalness:.55,roughness:.2,transparent:true,opacity:.82}),white=mat(0xe9e4d5),dark=mat(0x111923),skin=mat(0xb77c59),shirt=mat(0x172c3c),pants=mat(0x20252b),rubber=mat(0x080b0d),chrome=mat(0x9baeb8,.25,.8);
+function box(w,h,d,material,x,y,z,parent=scene){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o}
+function cyl(rt,rb,h,material,x,y,z,parent=scene){const o=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,16),material);o.position.set(x,y,z);o.castShadow=true;parent.add(o);return o}
+const ground=box(420,.5,420,mat(0x77877a),0,-.35,0);ground.receiveShadow=true;
+const roadMat=asphalt;
+function road(x,z,w,d){box(w,.08,d,roadMat,x,.02,z);if(w>d){for(let p=-w/2+3;p<w/2-2;p+=8)box(3,.015,.13,white,x+p,.071,z)}else{for(let p=-d/2+3;p<d/2-2;p+=8)box(.13,.015,3,white,x,.071,z+p)}}
+for(let i=-2;i<=2;i++){road(i*44,0,13,250);road(0,i*44,250,13)}
+// city blocks with detailed facades, balconies, window grids and rooftops
+const buildingMats=[0xaaa99c,0x9cabb0,0xc1b8a5,0x7e9298,0xb7b4a8].map(c=>mat(c));
+function building(x,z,w,d,h,idx){
+ const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);
+ const body=box(w,h,d,buildingMats[idx%buildingMats.length],0,h/2,0,g);
+ box(w+1,.5,d+1,mat(0x3c4850),0,h+.2,0,g);
+ const floors=Math.max(2,Math.floor(h/3.5)),cols=Math.max(2,Math.floor(w/2.8));
+ for(let f=0;f<floors;f++){
+  const y=2+f*(h-3)/floors;
+  for(let c=0;c<cols;c++){
+   const xw=-w/2+1.35+c*(w-2.7)/Math.max(1,cols-1);
+   box(.95,1.35,.09,glass,xw,y,d/2+.055,g);
+   box(1.12,.09,.18,white,xw,y-.76,d/2+.1,g);
+   box(1.12,.08,.16,white,xw,y+.76,d/2+.1,g);
+   if(f>0&&f%2===0)box(1.18,.08,.6,chrome,xw,y-.88,d/2+.3,g);
+  }
+ }
+ for(let f=0;f<floors;f++){const y=2+f*(h-3)/floors;for(let c=0;c<Math.floor(d/3);c++){const zz=-d/2+1.5+c*(d-3)/Math.max(1,Math.floor(d/3)-1);box(.09,1.25,.95,glass,w/2+.05,y,zz,g)}}
+ // storefront
+ box(w*.55,2.5,.13,glass,0,1.35,d/2+.12,g);box(w*.58,.22,.35,mat([0x203b4b,0x8d4f39,0x263e35,0x9b7b43][idx%4]),0,2.8,d/2+.2,g);
+ return g;
 }
-</style>
-`;
- const note='<div id="frontier-rotate-note"><div><span>↻</span>Gire o celular para jogar na horizontal.<br><small style="font-weight:400;color:#9eb2c2">FRONTIER foi projetado para tela deitada.</small></div></div>';
- html=html.replace('</head>',landscape+'</head>');
- html=html.replace('<body>','<body>'+note);
- document.open();document.write(html);document.close();
-}catch(error){
- document.getElementById('loading').innerHTML='<strong style="font-size:28px;letter-spacing:5px">FRONTIER</strong><small class="err">'+error.message+'</small>';
-}
-})();
-</script>
-</body>
-</html>
+let seed=7;function rnd(){seed=(seed*16807)%2147483647;return(seed-1)/2147483646}
+let idx=0;for(let gx=-2;gx<=2;gx++)for(let gz=-2;gz<=2;gz++){if(Math.abs(gx)+Math.abs(gz)<2)continue;const x=gx*44+(rnd()-.5)*9,z=gz*44+(rnd()-.5)*9;building(x,z,17+rnd()*9,16+rnd()*9,14+rnd()*24,idx++);}
+const trees=[];for(let i=0;i<45;i++){const x=(rnd()-.5)*190,z=(rnd()-.5)*190;if(Math.abs(x%44)<10||Math.abs(z%44)<10)continue;const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);cyl(.22,.35,2.5,mat(0x594333),0,1.25,0,g);const crown=new THREE.Mesh(new THREE.IcosahedronGeometry(1.6,1),mat(0x315b45));crown.position.y=3;g.add(crown);trees.push(g)}
+// street lights
+for(let x=-100;x<=100;x+=22)for(let z of [-8,8]){cyl(.09,.12,6,dark,x,3,z);box(.9,.09,.12,chrome,x+.35,5.9,z);const lamp=new THREE.PointLight(0xffdca0,.25,12);lamp.position.set(x+.7,5.7,z);scene.add(lamp)}
+// player model
+const player=new THREE.Group();scene.add(player);
+const torso=box(.72,1.05,.42,shirt,0,1.35,0,player);torso.geometry.translate(0,0,0);
+const hips=box(.62,.28,.4,pants,0,.77,0,player);
+const head=new THREE.Mesh(new THREE.SphereGeometry(.24,20,16),skin);head.position.y=2.08;head.castShadow=true;player.add(head);
+const hair=new THREE.Mesh(new THREE.SphereGeometry(.245,16,12,0,Math.PI*2,0,Math.PI*.48),dark);hair.position.y=2.14;player.add(hair);
+const limbs=[];for(const side of [-1,1]){const arm=new THREE.Group();arm.position.set(side*.48,1.72,0);player.add(arm);cyl(.13,.16,.72,shirt,0,-.34,0,arm);const hand=new THREE.Mesh(new THREE.SphereGeometry(.12,12,10),skin);hand.position.y=-.72;arm.add(hand);const leg=new THREE.Group();leg.position.set(side*.2,.68,0);player.add(leg);box(.23,.72,.26,pants,0,-.32,0,leg);box(.25,.13,.42,dark,0,-.7,.07,leg);limbs.push({arm,leg,side})}
+const shadow=new THREE.Mesh(new THREE.CircleGeometry(.55,24),new THREE.MeshBasicMaterial({color:0x17242a,transparent:true,opacity:.25}));shadow.rotation.x=-Math.PI/2;shadow.position.y=.03;player.add(shadow);
+player.position.set(0,0,8);
+function makeCar(x,z,color){const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);box(2.2,.65,4.3,mat(color,.35,.35),0,.72,0,g);box(1.8,.72,2.1,glass,0,1.36,-.15,g);box(1.86,.12,1.2,mat(color),0,1.75,-.2,g);for(let xx of [-1.12,1.12])for(let zz of [-1.35,1.35]){const w=cyl(.42,.42,.22,rubber,xx,.43,zz,g);w.rotation.z=Math.PI/2;cyl(.22,.22,.23,chrome,xx,.43,zz,g).rotation.z=Math.PI/2}box(.5,.18,.12,white,-.65,.9,2.17,g);box(.5,.18,.12,white,.65,.9,2.17,g);return g}
+const cars=[makeCar(10,4,0x152b3b),makeCar(-18,-18,0x6c3930),makeCar(28,30,0xaaa9a0)];
+// points of interest
+const poi=[{name:'BANCO CENTRAL',x:7,z:-37,color:0xb49b62,desc:'Banco, caixa eletrônico e cofre.'},{name:'DELEGACIA',x:-38,z:7,color:0x365a78,desc:'Delegacia e central policial.'},{name:'JOALHERIA',x:38,z:-5,color:0x79b9c9,desc:'Vitrines, joias e sistema de alarme.'},{name:'MERCADO',x:-6,z:39,color:0x65845e,desc:'Comércio, suprimentos e contratos.'},{name:'GARAGEM',x:40,z:39,color:0x596d7b,desc:'Veículos e oficina.'},{name:'HOTEL',x:-42,z:-38,color:0x947d70,desc:'Quartos, descanso e esconderijo.'}];
+for(const p of poi){const g=new THREE.Group();g.position.set(p.x,0,p.z);scene.add(g);box(12,7,10,mat(p.color),0,3.5,0,g);box(12.5,.4,10.5,mat(0x30383d),0,7.1,0,g);box(8,1.1,.2,mat(0x172a35),0,5.8,5.1,g);for(let x of [-3,0,3])box(1.8,2,.12,glass,x,2,5.08,g);const marker=new THREE.Mesh(new THREE.TorusGeometry(1.2,.09,8,24),mat(0xc6efff,.4,.4));marker.rotation.x=Math.PI/2;marker.position.y=8.5;g.add(marker);p.marker=marker}
+let money=2500,hp=100,energy=100,wanted=0,masked=false,first=false,running=false,inventory=[],activePoi=null,zone='LOOTY BAY · DOWNTOWN',cameraAngle=0;
+function hud(){document.getElementById('money').textContent='$ '+money.toLocaleString('en-US');document.getElementById('hp').textContent=hp;document.getElementById('energy').textContent=Math.round(energy);document.getElementById('hpbar').style.width=hp+'%';document.getElementById('energybar').style.width=energy+'%';document.getElementById('wanted').textContent=wanted?'PROCURADO · '+wanted+'★':'SEM PROCURADO';document.getElementById('wanted').style.color=wanted?'#ff9288':'#9fb6c5';document.getElementById('bagcount').textContent='MOCHILA '+inventory.length+'/20'}
+function modal(title,body,buttons){document.getElementById('mtitle').textContent=title;document.getElementById('mbody').textContent=body;const grid=document.getElementById('mgrid');grid.innerHTML='';buttons.forEach(([label,fn])=>{const b=document.createElement('button');b.className='control';b.textContent=label;b.onclick=()=>{fn();closeModal()};grid.appendChild(b)});document.getElementById('overlay').style.display='grid'}
+function closeModal(){document.getElementById('overlay').style.display='none'}document.getElementById('close').onclick=closeModal;
+function interact(){if(!activePoi){modal('NENHUM LOCAL PRÓXIMO','Explore as ruas e aproxime-se de um estabelecimento.',[['OK',()=>{}]]);return}const p=activePoi;const acts=[['Entrar / explorar',()=>modal(p.name,p.desc,[['Procurar itens',()=>{if(inventory.length<20){inventory.push('Suprimento');money+=75;document.getElementById('mission').textContent='Você encontrou suprimentos e recebeu $75.';hud()}else document.getElementById('mission').textContent='Mochila cheia.'] ],['Sair',()=>{}]])]];if(p.name==='BANCO CENTRAL')acts.push(['Acessar conta',()=>modal('BANCO CENTRAL','Saldo disponível: $'+money,[['Sacar $100',()=>{money+=100;hud()}],['Fechar',()=>{}]])]);if(p.name==='GARAGEM')acts.push(['Comprar veículo ($900)',()=>{if(money>=900){money-=900;hud();document.getElementById('mission').textContent='Veículo comprado. Vá até a garagem.'}}]);if(p.name==='DELEGACIA')acts.push(['Reduzir procurado ($300)',()=>{if(money>=300){money-=300;wanted=0;hud()}}]);if(p.name==='JOALHERIA'||p.name==='MERCADO')acts.push(['Iniciar atividade',()=>{wanted=masked?1:2;money+=250;hud();document.getElementById('mission').textContent='Atividade concluída: +$250. A polícia está procurando você.'}]);modal(p.name,'Escolha uma ação para este local.',acts)}
+function nearest(){let best=null,dist=1e9;for(const p of poi){const d=Math.hypot(player.position.x-p.x,player.position.z-p.z);if(d<dist){dist=d;best=p}}activePoi=dist<12?best:null;document.getElementById('hint').textContent=activePoi?'LOCAL PRÓXIMO · '+activePoi.name:'Explore e aproxime-se de um estabelecimento'}
+document.getElementById('act').onclick=interact;document.getElementById('mask').onclick=()=>{masked=!masked;document.getElementById('mask').textContent=masked?'RETIRAR MÁSCARA':'COLOCAR MÁSCARA';document.getElementById('mission').textContent=masked?'Máscara colocada.':'Máscara retirada.'};
+document.getElementById('camera').onclick=()=>{first=!first;document.getElementById('camera').textContent=first?'3ª PESSOA':'1ª PESSOA'};
+document.getElementById('run').onclick=()=>{running=!running;document.getElementById('run').textContent=running?'CAMINHAR':'CORRER'};
+document.getElementById('bag').onclick=()=>modal('MOCHILA',inventory.length?inventory.join(' · '):'Sua mochila está vazia.',[['Usar suprimento',()=>{if(inventory.length){inventory.pop();hp=Math.min(100,hp+20);hud()}}]]);
+document.getElementById('map').onclick=()=>modal('MAPA · LOOTY BAY','Downtown · Central District · Marina · Industrial Yard. Explore a cidade para desbloquear novas regiões.',[['Central District',()=>{}],['Marina',()=>{player.position.set(65,0,65)}],['Industrial Yard',()=>{player.position.set(-70,0,65)}]]);
+// touch joystick + keyboard
+const stick=document.getElementById('stick'),knob=document.getElementById('knob');let joy={x:0,y:0},touchId=null;
+function joyMove(e){const r=stick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;let dx=e.clientX-cx,dy=e.clientY-cy,l=Math.hypot(dx,dy),max=43;if(l>max){dx*=max/l;dy*=max/l}joy.x=dx/max;joy.y=dy/max;knob.style.transform='translate('+dx+'px,'+dy+'px)'}
+stick.addEventListener('pointerdown',e=>{touchId=e.pointerId;stick.setPointerCapture(touchId);joyMove(e)});stick.addEventListener('pointermove',e=>{if(e.pointerId===touchId)joyMove(e)});function joyEnd(){touchId=null;joy={x:0,y:0};knob.style.transform='translate(0,0)'}stick.addEventListener('pointerup',joyEnd);stick.addEventListener('pointercancel',joyEnd);
+const keys={};addEventListener('keydown',e=>keys[e.key.toLowerCase()]=true);addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+let last=performance.now(),walk=0;
+function frame(now){const dt=Math.min((now-last)/1000,.04);last=now;let ix=joy.x+(keys.d?1:0)-(keys.a?1:0),iz=joy.y+(keys.s?1:0)-(keys.w?1:0);let len=Math.hypot(ix,iz);if(len>1){ix/=len;iz/=len}const moving=len>.08;const speed=(running?10:5.2)*dt;player.position.x+=ix*speed;player.position.z+=iz*speed;player.position.x=THREE.MathUtils.clamp(player.position.x,-110,110);player.position.z=THREE.MathUtils.clamp(player.position.z,-110,110);if(moving){player.rotation.y=Math.atan2(ix,iz);walk+=dt*(running?13:8);limbs.forEach(({arm,leg,side})=>{leg.rotation.x=Math.sin(walk)*.65*side;arm.rotation.x=-Math.sin(walk)*.5*side})}else limbs.forEach(({arm,leg})=>{leg.rotation.x*=.8;arm.rotation.x*=.8});energy=running&&moving?Math.max(0,energy-12*dt):Math.min(100,energy+5*dt);if(energy<5)running=false;
+ nearest();const target=new THREE.Vector3(player.position.x,first?2.1:3.3,player.position.z);if(first){camera.position.copy(target).add(new THREE.Vector3(0,.1,0));camera.rotation.set(0,player.rotation.y,0)}else{const offset=new THREE.Vector3(0,5.5,-9).applyAxisAngle(new THREE.Vector3(0,1,0),player.rotation.y);camera.position.lerp(target.clone().add(offset),.14);camera.lookAt(player.position.x,1.3,player.position.z)}
+ poi.forEach(p=>p.marker.rotation.z+=dt*.7);cars.forEach((c,i)=>{c.position.y=Math.sin(now*.001+i)*.015});renderer.render(scene,camera);requestAnimationFrame(frame);if(Math.floor(now/300)%2===0)hud()}
+requestAnimationFrame(frame);
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+</script></body></html>
