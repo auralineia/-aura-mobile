@@ -1,30 +1,39 @@
 # FRONTIER
 
-Protótipo web mobile de um jogo de mundo aberto original. Looty Bay é apenas uma das cinco regiões planejadas.
+Protótipo web mobile de um jogo de mundo aberto original, usando jogos de extração em mundo aberto como referência de sistemas. Não utiliza código, mapas ou assets proprietários de ROB RUN.
 
-## Regiões presentes no protótipo
-- Looty Bay: cidade costeira, banco, delegacia, mercado, garagem, joalheria e hotel.
-- World / Desert: exploração, ruínas, posto avançado e coleta de recursos.
-- Lair / Base: depósito, oficina, garagem e mesa de construção.
-- Prison: blocos, pátio, refeitório e portão.
-- Settlement: centro comercial, lote, mercado e prefeitura.
+## Regiões jogáveis no protótipo
+- **Looty Bay:** cidade costeira procedural, quadras, vias, fachadas, vitrines, iluminação, vegetação e serviços urbanos.
+- **World / Desert:** terreno aberto, ruínas, posto avançado, recursos, centro de vendas e ponto de interesse territorial.
+- **Lair / Base:** área privada com depósito, oficina, garagem, construção e lavagem de dinheiro demonstrativa.
+- **Prison:** complexo cercado com pátio, blocos, refeitório e tentativa de fuga demonstrativa.
+- **Settlement:** lotes, comércio local e prefeitura.
 
-## Sistemas demonstrativos
-Movimentação por joystick touch e teclado, câmera em primeira/terceira pessoa, troca de região, pontos de interação, saldo fictício, inventário local em memória, atividades de recompensa, vida, energia e progressão demonstrativa.
+## Sistemas que já podem ser testados
+- Controles por joystick touch e teclado.
+- Câmera em primeira e terceira pessoa.
+- Personagem articulado com animação básica de caminhada.
+- Veículos dirigíveis com aceleração, direção e entrada/saída.
+- Papéis de civil, criminoso e policial.
+- Máscara, assaltos cronometrados, saque, nível de procurado, perseguição policial simplificada e fuga pela borda da cidade.
+- Banco, ATM, motel, lojas, joalheria, receptador e serviços.
+- Mochila, itens, dinheiro em mãos, saldo bancário, venda e armazenamento de saque.
+- Compra de lote, melhorias e atividades nas regiões.
+- Salvamento local no aparelho com localStorage.
 
 ## Abrir
 O protótipo usa Three.js via CDN. Abra `index.html` em um navegador moderno com internet. Hospedagem estática HTTPS é recomendada para iPhone.
 
 ## Limites importantes
-Este é um protótipo inicial, não um jogo completo pronto para produção. Não há multiplayer, servidor autoritativo, persistência de conta, salvamento, economia online, IA policial, combate, interiores completos, física/veículos dirigíveis, missões sistêmicas ou builds nativas iOS/Android. O estado atual é temporário e reinicia ao recarregar.
+Esta versão é um **vertical slice de prototipagem**, não um jogo completo nem um clone idêntico. A cidade e os personagens são montados proceduralmente com geometria simples; ainda não há modelos 3D de alta fidelidade, texturas de produção, interiores completos, animações profissionais, física realista, combate com armas, multiplayer, contas online, servidores autoritativos, economia compartilhada ou builds nativas iOS/Android. A polícia e os veículos usam lógica simplificada de demonstração. Os dados são salvos apenas no navegador/aparelho.
 
 ## Próximas etapas técnicas
-1. Separar cenas, entidades, UI e dados por módulos.
-2. Adicionar persistência local e sistema de salvamento.
-3. Implementar interação, combate, inventário e veículos reais.
-4. Criar backend autoritativo e autenticação antes de economia/multiplayer.
-5. Otimizar assets, streaming de mapas e controles para iOS/Android.
-6. Preparar pipeline de build nativa e testes em aparelhos.
+1. Substituir geometria procedural por assets 3D originais de produção e melhorar a direção de arte.
+2. Implementar colisões, interiores funcionais, combate, animações e física de veículos.
+3. Expandir cada mapa para áreas contínuas com streaming e pontos de extração.
+4. Criar backend autoritativo, autenticação, inventário e economia online.
+5. Adicionar multiplayer cooperativo e sistemas de clãs/território.
+6. Preparar pipeline de build nativa e testes em aparelhos iOS/Android.
 
-## Stack de prototipagem
-HTML, CSS, JavaScript ES modules e Three.js. A arquitetura de produção proposta permanece Unity 6 + C# / URP, com backend e multiplayer dedicados após validação do protótipo.
+## Stack atual
+HTML, CSS, JavaScript ES modules e Three.js. Unity 6 + C# / URP continua como opção de arquitetura de produção, caso o protótipo valide o loop principal.
